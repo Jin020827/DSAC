@@ -1,0 +1,13 @@
+{
+  "method": "ppoempc",
+  "policy": "PPO_MPC",
+  "num_agent": 1,
+  "seed": 0,
+  "batch_size": 64,
+  "discount": 0.99,
+  "max_episodes": 6001,
+  "max_timesteps": 450,
+  "dt": 0.2,
+  "mode": "train",
+  "log_reward": false
+}

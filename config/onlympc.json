@@ -1,0 +1,13 @@
+{
+  "method": "onlympc",
+  "num_agent": 1,
+  "num_barrier": 0,
+  "seed": 0,
+  "max_episodes": 200,
+  "max_timesteps": 500,
+  "obs_shape": [30],
+  "dt": 0.2,
+  "show_predicted_trajectory": true,
+  "fixed_points": true,
+  "log_reward": false
+}

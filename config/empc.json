@@ -1,0 +1,14 @@
+{
+  "method": "empc",
+  "policy": "E_MPC",
+  "num_agent": 1,
+  "seed": 0,
+  "max_episodes": 100,
+  "max_timesteps": 500,
+  "obs_shape": [30],
+  "dt": 0.2,
+  "mode": "test",
+  "show_predicted_trajectory": true,
+  "fixed_points": true,
+  "log_reward": false
+}
