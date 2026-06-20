@@ -8,16 +8,42 @@ from queue import Queue
 import random
 import threading
 import os
+import subprocess
 from Logger import Logger
 import logging
 from datetime import datetime
+
+
+def resolve_airsim_ip():
+    configured_ip = os.environ.get("AIRSIM_IP")
+    if configured_ip:
+        return configured_ip
+
+    if os.environ.get("WSL_DISTRO_NAME"):
+        try:
+            result = subprocess.run(
+                ["ip", "route", "show", "default"],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            route_parts = result.stdout.split()
+            if "via" in route_parts:
+                return route_parts[route_parts.index("via") + 1]
+        except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+            pass
+
+    return "127.0.0.1"
 
 
 
 class Environment():
     def __init__(self, index, map_index, max_timesteps, dt, log_reward=True):
         # connect to the AirSim simulator
-        self.client = airsim.MultirotorClient()
+        self.airsim_ip = resolve_airsim_ip()
+        print(f"Connecting to AirSim at {self.airsim_ip}:41451")
+        self.client = airsim.MultirotorClient(ip=self.airsim_ip)
         self.client.confirmConnection()
         self.index = index
         self.max_timesteps = max_timesteps
@@ -295,7 +321,7 @@ class Environment():
         return False, None
     
     def _poll_state(self, interval=0.01):
-        poll_client = airsim.MultirotorClient()
+        poll_client = airsim.MultirotorClient(ip=self.airsim_ip)
         poll_client.confirmConnection()
 
         while self._polling_active:
@@ -732,7 +758,7 @@ class Environment():
                 "dynamic": {"num": 0, "r": 0.0, "safe": 1.2}
             },
             102: {
-                "static":  {"num": 100, "r": 0.5, "safe": 0.5}, 
+                "static":  {"num": 100, "r": 1.0, "safe": 1.0}, 
                 "dynamic": {"num": 0, "r": 0.0, "safe": 0.0}
             },
             103: {
@@ -865,5 +891,4 @@ class Environment():
             except Exception as e:
                 # print(f"[Move] Failed to move {obj_name}: {e}")
                 continue
-
 
