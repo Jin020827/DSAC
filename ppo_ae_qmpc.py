@@ -272,38 +272,70 @@ class PPO_Ae_qMpc(object):
         advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
         return states, q_weights, velocities, actions, old_log_probs, returns, advantages
 
+    def samplefromrollout(self, velocity_rms):
+        return self._prepare_batch(velocity_rms)
+
+    def update_actor_critic(self, states, q_weights, velocities, actions,
+                            old_log_probs, returns, advantages, mb_idx):
+        new_log_probs, entropy, values = self.actor_critic.evaluate_actions(
+            states[mb_idx], q_weights[mb_idx], velocities[mb_idx], actions[mb_idx]
+        )
+
+        ratio = torch.exp(new_log_probs - old_log_probs[mb_idx])
+        unclipped = ratio * advantages[mb_idx]
+        clipped = torch.clamp(
+            ratio,
+            1.0 - self.clip_ratio,
+            1.0 + self.clip_ratio
+        ) * advantages[mb_idx]
+
+        policy_loss = -torch.min(unclipped, clipped).mean()
+        value_loss = F.mse_loss(values, returns[mb_idx])
+        entropy_loss = entropy.mean()
+        loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+        self.optimizer.step()
+        self.total_it += 1
+
+        return policy_loss, value_loss, entropy_loss
+
+    def update(self, rollout_batch):
+        states, q_weights, velocities, actions, old_log_probs, returns, advantages = rollout_batch
+        batch_size = states.size(0)
+        last_losses = None
+
+        for _ in range(self.ppo_epochs):
+            indices = torch.randperm(batch_size, device=device)
+            for start in range(0, batch_size, self.mini_batch_size):
+                mb_idx = indices[start:start + self.mini_batch_size]
+                last_losses = self.update_actor_critic(
+                    states, q_weights, velocities, actions,
+                    old_log_probs, returns, advantages, mb_idx
+                )
+
+        return last_losses
+
+    def myupdate(self, velocity_rms):
+        rollout_batch = self.samplefromrollout(velocity_rms)
+        last_losses = self.update(rollout_batch)
+        self.rollout.clear()
+        return last_losses
+
     def learn(self, velocity_rms):
         if not self.active or self.rollout.count < self.mini_batch_size:
             return
 
-        states, q_weights, velocities, actions, old_log_probs, returns, advantages = self._prepare_batch(velocity_rms)
-        batch_size = states.size(0)
-        for _ in range(self.ppo_epochs):
-            indices = torch.randperm(batch_size, device=device)
-            for start in range(0, batch_size, self.mini_batch_size):
-                mb_idx = indices[start : start + self.mini_batch_size]
-                new_log_probs, entropy, values = self.actor_critic.evaluate_actions(
-                    states[mb_idx], q_weights[mb_idx], velocities[mb_idx], actions[mb_idx]
-                )
-                ratio = torch.exp(new_log_probs - old_log_probs[mb_idx])
-                unclipped = ratio * advantages[mb_idx]
-                clipped = torch.clamp(ratio, 1.0 - self.clip_ratio, 1.0 + self.clip_ratio) * advantages[mb_idx]
-                policy_loss = -torch.min(unclipped, clipped).mean()
-                value_loss = F.mse_loss(values, returns[mb_idx])
-                entropy_loss = entropy.mean()
-                loss = policy_loss + self.value_coef * value_loss - self.entropy_coef * entropy_loss
+        print(f"[PPO-Q] training rollout={self.rollout.count}, epoch={self.epoch}")
+        last_losses = self.myupdate(velocity_rms)
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
-                self.optimizer.step()
-                self.total_it += 1
-
-        if self.writer is not None:
+        if self.writer is not None and last_losses is not None:
+            policy_loss, value_loss, entropy_loss = last_losses
             self.writer.add_scalar("loss/q_policy_loss", policy_loss.item(), self.epoch)
             self.writer.add_scalar("loss/q_value_loss", value_loss.item(), self.epoch)
             self.writer.add_scalar("loss/q_entropy", entropy_loss.item(), self.epoch)
-        self.rollout.clear()
 
     def save(self, epoch, policy_path):
         if not self.active:

@@ -876,7 +876,7 @@ if __name__ == '__main__':
             print(f"测试模式：policy_q={'已创建' if policy_q else '未创建'}, policy_mpc={'已创建' if policy_mpc else '未创建'}")
 
         # --- 设置路径 ---
-        policy_path = './policy/weicheng'
+        policy_path = './policy/DSAC'
         if not os.path.exists(policy_path): 
             os.makedirs(policy_path)
         q_policy_path = policy_path + '/q'

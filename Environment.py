@@ -758,7 +758,7 @@ class Environment():
                 "dynamic": {"num": 0, "r": 0.0, "safe": 1.2}
             },
             102: {
-                "static":  {"num": 100, "r": 1.0, "safe": 1.0}, 
+                "static":  {"num": 100, "r": 1.0, "safe": 0.5}, 
                 "dynamic": {"num": 0, "r": 0.0, "safe": 0.0}
             },
             103: {

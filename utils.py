@@ -494,17 +494,17 @@ def generate_points(num_env=20, map_index=1, fixed=False):
     elif map_index == 103:
         x_init_range, y_init_range, z_init_range = (9.0, 10.0), (17.0, 18.0), default_z_range
         x_goal_range, y_goal_range, z_goal_range = (60.0, 61.0), (17.0, 18.0), default_z_range
-        distance_threshold_min, distance_threshold_max = 61.0, 63.0
+        distance_threshold_min, distance_threshold_max = 51.0, 53.0
     # 绘图地图测试
     elif map_index == 104:
         x_init_range, y_init_range, z_init_range = (9.0, 10.0), (17.0, 18.0), default_z_range
-        x_goal_range, y_goal_range, z_goal_range = (70.0, 71.0), (17.0, 18.0), default_z_range
-        distance_threshold_min, distance_threshold_max = 61.0, 63.0
+        x_goal_range, y_goal_range, z_goal_range = (60.0, 61.0), (17.0, 18.0), default_z_range
+        distance_threshold_min, distance_threshold_max = 51.0, 53.0
     # 训练地图
     else:
         x_init_range, y_init_range, z_init_range = (9.0, 10.0), (0.0, 28.0), default_z_range
-        x_goal_range, y_goal_range, z_goal_range = (70.0, 71.0), (0.0, 28.0), default_z_range
-        distance_threshold_min, distance_threshold_max = 61.0, 63.0
+        x_goal_range, y_goal_range, z_goal_range = (60.0, 61.0), (0.0, 28.0), default_z_range
+        distance_threshold_min, distance_threshold_max = 51.0, 53.0
 
     init_points = []
     goal_points = []

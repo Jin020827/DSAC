@@ -65,6 +65,26 @@ args = argparse.Namespace(
     value_coef=_config.get("value_coef", 0.5),
     max_grad_norm=_config.get("max_grad_norm", 0.5),
     rollout_steps=_config.get("rollout_steps", 1024),
+    
+    q_learning_rate=_config.get("q_learning_rate", _config.get("learning_rate", 0.0003)),
+    q_gae_lambda=_config.get("q_gae_lambda", _config.get("gae_lambda", 0.95)),
+    q_clip_ratio=_config.get("q_clip_ratio", _config.get("clip_ratio", 0.2)),
+    q_ppo_epochs=_config.get("q_ppo_epochs", _config.get("ppo_epochs", 10)),
+    q_mini_batch_size=_config.get("q_mini_batch_size", _config.get("mini_batch_size", 64)),
+    q_entropy_coef=_config.get("q_entropy_coef", _config.get("entropy_coef", 0.01)),
+    q_value_coef=_config.get("q_value_coef", _config.get("value_coef", 0.5)),
+    q_max_grad_norm=_config.get("q_max_grad_norm", _config.get("max_grad_norm", 0.5)),
+    q_rollout_steps=_config.get("q_rollout_steps", _config.get("rollout_steps", 1024)),
+
+    mpc_learning_rate=_config.get("mpc_learning_rate", _config.get("learning_rate", 0.0003)),
+    mpc_gae_lambda=_config.get("mpc_gae_lambda", _config.get("gae_lambda", 0.95)),
+    mpc_clip_ratio=_config.get("mpc_clip_ratio", _config.get("clip_ratio", 0.2)),
+    mpc_ppo_epochs=_config.get("mpc_ppo_epochs", _config.get("ppo_epochs", 10)),
+    mpc_mini_batch_size=_config.get("mpc_mini_batch_size", _config.get("mini_batch_size", 64)),
+    mpc_entropy_coef=_config.get("mpc_entropy_coef", _config.get("entropy_coef", 0.01)),
+    mpc_value_coef=_config.get("mpc_value_coef", _config.get("value_coef", 0.5)),
+    mpc_max_grad_norm=_config.get("mpc_max_grad_norm", _config.get("max_grad_norm", 0.5)),
+    mpc_rollout_steps=_config.get("mpc_rollout_steps", _config.get("rollout_steps", 1024)),
 )
 
 
@@ -78,18 +98,18 @@ kwargs_q = {
     "action_shape": args.action_shape,             # 动作维度
     "discount": args.discount,                      # SAC折扣因子
     "tau": args.tau,                                # 目标网络软更新比例
-    "lr": args.learning_rate,                       # 学习率
+    "lr": args.q_learning_rate,                       # 学习率
     "hidden_dim": args.hidden_dim,                  # 隐藏层神经元数
     "init_steps": args.init_steps,                  # 初始化随机探索步数
     "mode": args.mode,                              # 'train' 或 'test'
-    "gae_lambda": args.gae_lambda,
-    "clip_ratio": args.clip_ratio,
-    "ppo_epochs": args.ppo_epochs,
-    "mini_batch_size": args.mini_batch_size,
-    "entropy_coef": args.entropy_coef,
-    "value_coef": args.value_coef,
-    "max_grad_norm": args.max_grad_norm,
-    "rollout_steps": args.rollout_steps,
+    "gae_lambda": args.q_gae_lambda,
+    "clip_ratio": args.q_clip_ratio,
+    "ppo_epochs": args.q_ppo_epochs,
+    "mini_batch_size": args.q_mini_batch_size,
+    "entropy_coef": args.q_entropy_coef,
+    "value_coef": args.q_value_coef,
+    "max_grad_norm": args.q_max_grad_norm,
+    "rollout_steps": args.q_rollout_steps,
     # Actor 相关
     "num_layers": args.num_layers,                  # Actor隐藏层数量
     "num_filters": args.num_filters,                # 编码器特征数（占位）
@@ -107,18 +127,18 @@ kwargs_mpc = {
     "action_shape": args.action_shape_2,
     "discount": args.discount,
     "tau": args.tau,
-    "lr": args.learning_rate,
+    "lr": args.mpc_learning_rate,
     "hidden_dim": args.hidden_dim,
     "init_steps": args.init_steps,
     "mode": args.mode,
-    "gae_lambda": args.gae_lambda,
-    "clip_ratio": args.clip_ratio,
-    "ppo_epochs": args.ppo_epochs,
-    "mini_batch_size": args.mini_batch_size,
-    "entropy_coef": args.entropy_coef,
-    "value_coef": args.value_coef,
-    "max_grad_norm": args.max_grad_norm,
-    "rollout_steps": args.rollout_steps,
+    "gae_lambda": args.mpc_gae_lambda,
+    "clip_ratio": args.mpc_clip_ratio,
+    "ppo_epochs": args.mpc_ppo_epochs,
+    "mini_batch_size": args.mpc_mini_batch_size,
+    "entropy_coef": args.mpc_entropy_coef,
+    "value_coef": args.mpc_value_coef,
+    "max_grad_norm": args.mpc_max_grad_norm,
+    "rollout_steps": args.mpc_rollout_steps,
     # Actor 相关
     "num_layers": args.num_layers,
     "num_filters": args.num_filters,
@@ -322,7 +342,7 @@ def run(comm, env, policy_q=None, policy_mpc=None, starting_epoch=0, train_polic
 
                 step_start_time = time.time()
                 agent2_wanted_update = True
-                env.move_obstacles(step)
+                # env.move_obstacles(step)
 
                 try:
                     # 事件触发规则
@@ -795,7 +815,7 @@ def run(comm, env, policy_q=None, policy_mpc=None, starting_epoch=0, train_polic
         if not run_test_flag:
             if train_policy_q and policy_q is not None:
                 # 训练Q权重调整policy
-                if policy_q.rollout.count >= args.mini_batch_size:
+                if policy_q.rollout.count >= args.q_rollout_steps:
                     policy_q.learn(velocity_rms=velocity_rms)
                 if ((epoch != 0) and (epoch % 20 == 0)):
                     policy_q.save(epoch, policy_path + '/q')
@@ -803,7 +823,7 @@ def run(comm, env, policy_q=None, policy_mpc=None, starting_epoch=0, train_polic
                                 '################'.format(epoch))
             if train_policy_mpc and policy_mpc is not None:
                 # 训练MPC更新控制policy
-                if policy_mpc.rollout.count >= args.mini_batch_size:
+                if policy_mpc.rollout.count >= args.mpc_rollout_steps:
                     policy_mpc.learn(velocity_rms=velocity_rms)
                 if ((epoch != 0) and (epoch % 20 == 0)):
                     policy_mpc.save(epoch, policy_path + '/mpc')
@@ -834,18 +854,18 @@ if __name__ == '__main__':
     # =====================================================================
     # 【全局控制开关设置区】
     # 1. 训练与测试总开关 (两个都不训练即为测试模式)
-    train_policy_q = False
-    train_policy_mpc = False
+    train_policy_q = True
+    train_policy_mpc = True
     run_test_flag = not train_policy_q and not train_policy_mpc
 
     # 2. 模型加载总开关 (决定是否从本地文件读取历史模型)
-    load_policy_q = False     
-    load_policy_mpc = False   
+    load_policy_q = True     
+    load_policy_mpc = True   
 
     # 3. 参数配置
-    map_index = 102
-    policy_epoch_index_q = 1000
-    policy_epoch_index_mpc = 1320
+    map_index = 101
+    policy_epoch_index_q = 120
+    policy_epoch_index_mpc = 120
     load_replayer = False  # 是否加载经验回放池 (通常为 False)
     disp_info_flag = True # 是否在终端打印详细的步骤信息 (通常为 False)
     # =====================================================================

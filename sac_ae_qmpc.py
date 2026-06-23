@@ -5,8 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import copy
 import utils
-from encoder import make_encoder
-from decoder import make_decoder
+# from encoder import make_encoder
+# from decoder import make_decoder
 # from torch.autograd import Variable  # 已弃用，不再需要
 from Logger import Logger
 import logging
